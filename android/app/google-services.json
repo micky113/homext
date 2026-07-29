@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "180043317967",
+    "project_id": "homext-gate-7098",
+    "storage_bucket": "homext-gate-7098.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:180043317967:android:c85574367c6858cd25adba",
+        "android_client_info": {
+          "package_name": "com.mygate.homext"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe-p_QGAp5VeWItUopa7WIE0HoxU_Hf_A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
