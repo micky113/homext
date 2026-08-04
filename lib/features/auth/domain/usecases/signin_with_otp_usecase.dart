@@ -6,7 +6,7 @@ class SignInWithOtpUseCase {
 
   SignInWithOtpUseCase(this._repository);
 
-  Future<UserEntity> call({
+  Future<UserEntity?> call({
     required String verificationId,
     required String smsCode,
   }) {

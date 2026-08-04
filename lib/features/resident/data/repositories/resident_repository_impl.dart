@@ -19,7 +19,7 @@ class ResidentRepositoryImpl implements ResidentRepository {
     }
 
     return _firestore
-        .collection('users')
+        .collection('residents')
         .doc(userId)
         .collection('invites')
         .orderBy('inviteDate', descending: true)
@@ -51,7 +51,7 @@ class ResidentRepositoryImpl implements ResidentRepository {
     }
 
     final docRef = _firestore
-        .collection('users')
+        .collection('residents')
         .doc(userId)
         .collection('invites')
         .doc();

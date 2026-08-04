@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_drawer.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/guard_provider.dart';
 import '../widgets/visitor_checkin_form.dart';
@@ -92,17 +92,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           'Guard Terminal',
           style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              authProvider.logout();
-              context.go('/login');
-            },
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Logout',
-          )
-        ],
       ),
+      drawer: const AppDrawer(),
       body: user == null
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -144,11 +135,13 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Row(
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
                                   children: [
                                     _buildBadge(Icons.location_on_rounded, user.gateNumber),
-                                    const SizedBox(width: 8),
                                     _buildBadge(Icons.shield_rounded, 'Active Guard'),
+                                    _buildBadge(Icons.business_rounded, user.metadata['societyName'] ?? 'Your Society'),
                                   ],
                                 ),
                               ],

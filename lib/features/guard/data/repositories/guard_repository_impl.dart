@@ -71,8 +71,7 @@ class GuardRepositoryImpl implements GuardRepository {
     // Fetch user who matches the target flatNumber to get their fcmToken
     try {
       final query = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'RESIDENT')
+          .collection('residents')
           .where('metadata.flatNumber', isEqualTo: flatNumber)
           .limit(1)
           .get();

@@ -61,16 +61,72 @@ class MockDataService {
       uid: 'resident-1',
       name: 'Amit Sharma',
       role: 'RESIDENT',
-      metadata: {'flatNumber': 'A-402'},
+      metadata: {'flatNumber': 'A-402', 'societyId': 'homext_heights', 'societyName': 'Homext Heights', 'phone': '+919876543210'},
       fcmToken: 'mock-fcm-token-resident',
     ),
     UserModel(
       uid: 'guard-1',
       name: 'Guard Ramesh',
       role: 'GUARD',
-      metadata: {'gateNumber': 'Gate 1'},
+      metadata: {'gateNumber': 'Gate 1', 'societyId': 'homext_heights', 'societyName': 'Homext Heights', 'phone': '+919876543211'},
       fcmToken: 'mock-fcm-token-guard',
     ),
+    UserModel(
+      uid: 'resident-2',
+      name: 'John Doe',
+      role: 'RESIDENT',
+      metadata: {'flatNumber': 'B-305', 'societyId': 'sunrise_apartments', 'societyName': 'Sunrise Apartments', 'phone': '+919876543214'},
+      fcmToken: 'mock-fcm-token-resident2',
+    ),
+    UserModel(
+      uid: 'guard-2',
+      name: 'Guard David',
+      role: 'GUARD',
+      metadata: {'gateNumber': 'Gate 1', 'societyId': 'sunrise_apartments', 'societyName': 'Sunrise Apartments', 'phone': '+919876543215'},
+      fcmToken: 'mock-fcm-token-guard2',
+    ),
+    UserModel(
+      uid: 'admin-1',
+      name: 'Homext Heights Admin',
+      role: 'ADMIN',
+      metadata: {'societyId': 'homext_heights', 'societyName': 'Homext Heights'},
+      fcmToken: 'mock-fcm-token-admin1',
+    ),
+    UserModel(
+      uid: 'admin-2',
+      name: 'Sunrise Apartments Admin',
+      role: 'ADMIN',
+      metadata: {'societyId': 'sunrise_apartments', 'societyName': 'Sunrise Apartments'},
+      fcmToken: 'mock-fcm-token-admin2',
+    ),
+  ];
+
+  // Pre-registered Members List (Residents & Guards)
+  final List<Map<String, dynamic>> _preRegisteredMembers = [
+    {
+      'name': 'Sumit Verma',
+      'phone': '+919876543212',
+      'role': 'RESIDENT',
+      'flatNumber': 'B-102',
+      'societyId': 'homext_heights',
+      'societyName': 'Homext Heights',
+    },
+    {
+      'name': 'Jane Smith',
+      'phone': '+919876543213',
+      'role': 'RESIDENT',
+      'flatNumber': 'C-404',
+      'societyId': 'sunrise_apartments',
+      'societyName': 'Sunrise Apartments',
+    },
+    {
+      'name': 'Guard Suresh',
+      'phone': '+919876543221',
+      'role': 'GUARD',
+      'gateNumber': 'Gate 2',
+      'societyId': 'homext_heights',
+      'societyName': 'Homext Heights',
+    },
   ];
 
   // Simulated Database Stores
@@ -118,7 +174,7 @@ class MockDataService {
     onCodeSent(_mockVerificationId!);
   }
 
-  Future<UserModel> signInWithOtp({
+  Future<UserModel?> signInWithOtp({
     required String verificationId,
     required String smsCode,
   }) async {
@@ -131,19 +187,14 @@ class MockDataService {
       throw Exception('Incorrect OTP verification code. Enter 123456');
     }
 
+    final cleanPhone = _mockPhoneNumber?.replaceAll(RegExp(r'\s+'), '') ?? '';
+    final index = _users.indexWhere((u) => u.metadata['phone'] == cleanPhone);
+    
     UserModel? user;
-    if (_mockPhoneNumber == '+919876543211') {
-      user = _users.firstWhere((u) => u.role == 'GUARD');
-    } else if (_mockPhoneNumber == '+919876543210') {
-      user = _users.firstWhere((u) => u.role == 'RESIDENT');
+    if (index != -1) {
+      user = _users[index];
     } else {
-      user = UserModel(
-        uid: 'mock-user-${DateTime.now().millisecondsSinceEpoch}',
-        name: 'New Resident',
-        role: 'RESIDENT',
-        metadata: {'flatNumber': 'C-302'},
-        fcmToken: '',
-      );
+      user = null;
     }
 
     _currentUser = user;
@@ -278,6 +329,163 @@ class MockDataService {
       _checkins[index] = updated;
       _checkinsStreamController.add(List.from(_checkins));
     }
+  }
+
+  Future<void> updateProfile({
+    required String userId,
+    required String name,
+    required String flatNumber,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Update in _users list (if they exist there)
+    final userIndex = _users.indexWhere((u) => u.uid == userId);
+    if (userIndex != -1) {
+      _users[userIndex] = _users[userIndex].copyWith(
+        name: name,
+        metadata: {
+          ..._users[userIndex].metadata,
+          'flatNumber': flatNumber,
+        },
+      );
+    }
+    
+    // Update current authenticated user
+    if (_currentUser != null && _currentUser!.uid == userId) {
+      _currentUser = _currentUser!.copyWith(
+        name: name,
+        metadata: {
+          ..._currentUser!.metadata,
+          'flatNumber': flatNumber,
+        },
+      );
+      _authStreamController.add(_currentUser);
+    }
+  }
+
+  Future<UserModel> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    final cleanEmail = email.trim().toLowerCase();
+    
+    if (cleanEmail == 'admin@homext.com' && password == 'password123') {
+      final user = _users.firstWhere((u) => u.uid == 'admin-1');
+      _currentUser = user;
+      _authStreamController.add(_currentUser);
+      return user;
+    } else if (cleanEmail == 'admin@sunrise.com' && password == 'password123') {
+      final user = _users.firstWhere((u) => u.uid == 'admin-2');
+      _currentUser = user;
+      _authStreamController.add(_currentUser);
+      return user;
+    } else {
+      throw Exception('Invalid email or password. Use admin@homext.com / password123');
+    }
+  }
+
+  Stream<List<UserModel>> streamSocietyMembers(String societyId) {
+    final controller = StreamController<List<UserModel>>.broadcast();
+    
+    // Push initial
+    final initial = _users.where((u) => u.metadata['societyId'] == societyId).toList();
+    controller.add(initial);
+    
+    // Listen to changes
+    final sub = onAuthStateChanged.listen((_) {
+      final updated = _users.where((u) => u.metadata['societyId'] == societyId).toList();
+      controller.add(updated);
+    });
+    
+    controller.onCancel = () {
+      sub.cancel();
+    };
+    
+    return controller.stream;
+  }
+
+  Future<void> preRegisterMember({
+    required String name,
+    required String phone,
+    required String role,
+    String? flatNumber,
+    String? gateNumber,
+    required String societyId,
+    required String societyName,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    var cleanPhone = phone.trim().replaceAll(RegExp(r'\s+'), '');
+    if (!cleanPhone.startsWith('+')) {
+      cleanPhone = '+91$cleanPhone';
+    }
+    
+    _preRegisteredMembers.removeWhere((item) => item['phone'] == cleanPhone);
+    
+    _preRegisteredMembers.add({
+      'name': name,
+      'phone': cleanPhone,
+      'role': role,
+      'flatNumber': flatNumber,
+      'gateNumber': gateNumber,
+      'societyId': societyId,
+      'societyName': societyName,
+    });
+  }
+
+  Future<UserModel?> verifyAndRegisterMember({
+    required String userId,
+    required String phoneNumber,
+    required String societyName,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '');
+    final cleanSociety = societyName.trim().toLowerCase();
+
+    final matchIndex = _preRegisteredMembers.indexWhere((item) =>
+        item['phone'] == cleanPhone &&
+        (item['societyName'] as String).toLowerCase() == cleanSociety);
+
+    if (matchIndex == -1) {
+      throw Exception('Your phone number is not pre-registered for "$societyName". Please contact your society admin.');
+    }
+
+    final match = _preRegisteredMembers[matchIndex];
+    final role = match['role'] ?? 'RESIDENT';
+
+    final newUser = UserModel(
+      uid: userId,
+      name: match['name'],
+      role: role,
+      metadata: {
+        if (role == 'RESIDENT') 'flatNumber': match['flatNumber'] ?? '',
+        if (role == 'GUARD') 'gateNumber': match['gateNumber'] ?? '',
+        'societyId': match['societyId'],
+        'societyName': match['societyName'],
+        'phone': cleanPhone,
+      },
+      fcmToken: '',
+    );
+
+    _users.add(newUser);
+    
+    _currentUser = newUser;
+    _authStreamController.add(_currentUser);
+    
+    return newUser;
+  }
+
+  Future<bool> isPhoneNumberApproved(String phoneNumber) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '');
+    
+    // Check registered users
+    final existsInUsers = _users.any((u) => u.metadata['phone'] == cleanPhone);
+    if (existsInUsers) return true;
+
+    // Check pre-registered members
+    final existsInPreReg = _preRegisteredMembers.any((m) => m['phone'] == cleanPhone);
+    return existsInPreReg;
   }
 
   // Helper to trigger initial streams

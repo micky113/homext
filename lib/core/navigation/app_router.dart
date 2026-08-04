@@ -4,6 +4,7 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/guard/presentation/screens/guard_dashboard_screen.dart';
 import '../../features/resident/presentation/screens/resident_dashboard_screen.dart';
+import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthProvider authProvider) {
@@ -28,19 +29,25 @@ class AppRouter {
 
         final role = user.role;
 
-        // 3. Prevent logged in user from visiting login page
+        // 3. Prevent logged in user from visiting login page (Admins only, Residents/Guards stay on starting page to see choices)
         if (isLoggingIn) {
-          if (role == 'RESIDENT') return '/resident/dashboard';
-          if (role == 'GUARD') return '/guard/dashboard';
+          if (role == 'ADMIN') return '/admin/dashboard';
         }
 
         // 4. Role-based routing guards
         if (state.matchedLocation.startsWith('/resident') && role != 'RESIDENT') {
-          return '/guard/dashboard';
+          if (role == 'GUARD') return '/guard/dashboard';
+          if (role == 'ADMIN') return '/admin/dashboard';
         }
 
         if (state.matchedLocation.startsWith('/guard') && role != 'GUARD') {
-          return '/resident/dashboard';
+          if (role == 'RESIDENT') return '/resident/dashboard';
+          if (role == 'ADMIN') return '/admin/dashboard';
+        }
+
+        if (state.matchedLocation.startsWith('/admin') && role != 'ADMIN') {
+          if (role == 'RESIDENT') return '/resident/dashboard';
+          if (role == 'GUARD') return '/guard/dashboard';
         }
 
         // Allow routing if guards pass
@@ -58,6 +65,10 @@ class AppRouter {
         GoRoute(
           path: '/guard/dashboard',
           builder: (context, state) => const GuardDashboardScreen(),
+        ),
+        GoRoute(
+          path: '/admin/dashboard',
+          builder: (context, state) => const AdminDashboardScreen(),
         ),
       ],
       errorBuilder: (context, state) => Scaffold(

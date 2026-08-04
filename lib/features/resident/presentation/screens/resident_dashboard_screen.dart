@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_drawer.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/resident_provider.dart';
 import '../widgets/incoming_alert_dialog.dart';
 import '../widgets/invite_visitor_dialog.dart';
+import '../../../auth/domain/entities/user_entity.dart';
 
 class ResidentDashboardScreen extends StatefulWidget {
   const ResidentDashboardScreen({super.key});
@@ -44,6 +45,131 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     });
   }
 
+  void _showEditProfileDialog(BuildContext context, UserEntity user) {
+    final nameController = TextEditingController(text: user.name);
+    final flatController = TextEditingController(text: user.flatNumber);
+    final formKey = GlobalKey<FormState>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isUpdating = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Edit Profile Details',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Outfit',
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Your Name',
+                          prefixIcon: Icon(Icons.person_outline_rounded),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: flatController,
+                        decoration: const InputDecoration(
+                          labelText: 'Flat / House Number',
+                          prefixIcon: Icon(Icons.home_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your flat number';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      isUpdating
+                          ? const Center(child: CircularProgressIndicator())
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    if (formKey.currentState!.validate()) {
+                                      setDialogState(() {
+                                        isUpdating = true;
+                                      });
+                                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                                      final success = await authProvider.updateProfile(
+                                        name: nameController.text.trim(),
+                                        flatNumber: flatController.text.trim(),
+                                      );
+                                      if (success && context.mounted) {
+                                        final residentProvider = Provider.of<ResidentProvider>(context, listen: false);
+                                        residentProvider.initialize(user.uid, flatController.text.trim());
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Profile updated successfully!'),
+                                            backgroundColor: AppColors.secondary,
+                                          ),
+                                        );
+                                      } else if (context.mounted) {
+                                        setDialogState(() {
+                                          isUpdating = false;
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(authProvider.errorMessage ?? 'Failed to update profile'),
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    minimumSize: const Size(100, 44),
+                                  ),
+                                  child: const Text('Save'),
+                                ),
+                              ],
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -64,17 +190,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           'Resident Hub',
           style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              authProvider.logout();
-              context.go('/login');
-            },
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Logout',
-          )
-        ],
       ),
+      drawer: const AppDrawer(),
       body: user == null
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -98,28 +215,51 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Welcome back,',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white.withAlpha(200),
-                              ),
-                            ),
-                            Text(
-                              user.name,
-                              style: const TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontFamily: 'Outfit',
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome back,',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.white.withAlpha(200),
+                                        ),
+                                      ),
+                                      Text(
+                                        user.name,
+                                        style: const TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontFamily: 'Outfit',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => _showEditProfileDialog(context, user),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.white.withAlpha(40),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.edit_rounded, size: 20),
+                                  tooltip: 'Edit Profile',
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
                               children: [
                                 _buildBadge(Icons.home_rounded, 'Flat ${user.flatNumber}'),
-                                const SizedBox(width: 8),
                                 _buildBadge(Icons.verified_user_rounded, 'Resident'),
+                                _buildBadge(Icons.business_rounded, user.metadata['societyName'] ?? 'Your Society'),
                               ],
                             ),
                           ],
