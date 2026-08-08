@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import '../../features/auth/data/models/user_model.dart';
 import '../../features/guard/data/models/checkin_model.dart';
 import '../../features/resident/data/models/invite_model.dart';
@@ -275,6 +276,10 @@ class MockDataService {
 
     _invites.insert(0, newInvite);
     _invitesStreamController.add(List.from(_invites));
+
+    developer.log("Simulating FCM Notification to Society Guards:");
+    developer.log("Payload: { title: 'New Pre-Approved Invite', body: 'Flat $flatNumber ($hostName) pre-approved entry for $visitorName ($purpose)' }");
+    
     return newInvite;
   }
 

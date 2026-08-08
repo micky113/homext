@@ -22,6 +22,16 @@ class GuardProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  InviteEntity? _latestNewInviteAlert;
+  bool _isInitialInvitesLoad = true;
+
+  InviteEntity? get latestNewInviteAlert => _latestNewInviteAlert;
+
+  void clearInviteAlert() {
+    _latestNewInviteAlert = null;
+    notifyListeners();
+  }
+
   StreamSubscription<List<CheckInEntity>>? _checkinsSubscription;
   StreamSubscription<List<InviteEntity>>? _invitesSubscription;
 
@@ -60,7 +70,14 @@ class GuardProvider extends ChangeNotifier {
     // 2. Stream society invites
     _invitesSubscription = _streamPreApprovedInvitesUseCase.call().listen(
       (data) {
+        if (!_isInitialInvitesLoad && data.length > _preApprovedInvites.length) {
+          final newInvites = data.where((item) => !_preApprovedInvites.any((old) => old.id == item.id)).toList();
+          if (newInvites.isNotEmpty) {
+            _latestNewInviteAlert = newInvites.first;
+          }
+        }
         _preApprovedInvites = data;
+        _isInitialInvitesLoad = false;
         notifyListeners();
       },
       onError: (err) {

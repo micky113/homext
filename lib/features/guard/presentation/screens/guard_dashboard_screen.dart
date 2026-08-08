@@ -83,6 +83,52 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     final user = authProvider.currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    // In-app alert for newly received pre-approved invites
+    final latestAlert = guardProvider.latestNewInviteAlert;
+    if (latestAlert != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.verified_user_rounded, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'NEW PRE-APPROVED ENTRY',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          letterSpacing: 1,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Flat ${latestAlert.flatNumber} (${latestAlert.hostName}) pre-approved ${latestAlert.visitorName} for ${latestAlert.purpose}. Code: ${latestAlert.inviteCode}',
+                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.secondary,
+            duration: const Duration(seconds: 6),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+        guardProvider.clearInviteAlert();
+      });
+    }
+    
     // Check if layout should be wide (desktop/tablet) or narrow (mobile)
     final isWide = MediaQuery.of(context).size.width > 800;
 

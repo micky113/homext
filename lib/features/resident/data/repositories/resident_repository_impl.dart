@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/services/mock_data_service.dart';
 import '../../../../core/utils/constants.dart';
@@ -70,6 +71,47 @@ class ResidentRepositoryImpl implements ResidentRepository {
     );
 
     await docRef.set(model.toMap());
+
+    // Send notifications to society guards
+    try {
+      final residentDoc = await _firestore.collection('residents').doc(userId).get();
+      if (residentDoc.exists) {
+        final data = residentDoc.data();
+        if (data != null && data['metadata'] != null) {
+          final societyId = data['metadata']['societyId'];
+          if (societyId != null) {
+            final guardsQuery = await _firestore
+                .collection('guards')
+                .where('metadata.societyId', isEqualTo: societyId)
+                .get();
+
+            for (final guardDoc in guardsQuery.docs) {
+              final guardData = guardDoc.data();
+              final guardToken = guardData['fcmToken'];
+              if (guardToken != null && guardToken.toString().isNotEmpty) {
+                await _firestore.collection('notifications_queue').add({
+                  'token': guardToken,
+                  'title': 'New Pre-Approved Invite',
+                  'body': 'Flat $flatNumber ($hostName) pre-approved entry for $visitorName ($purpose)',
+                  'data': {
+                    'type': 'PRE_APPROVED_ALERT',
+                    'inviteId': docRef.id,
+                    'visitorName': visitorName,
+                    'flatNumber': flatNumber,
+                    'hostName': hostName,
+                    'inviteCode': code,
+                  },
+                  'timestamp': FieldValue.serverTimestamp(),
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      developer.log("Error enqueuing FCM guard notification for invite: $e");
+    }
+
     return model;
   }
 
@@ -106,12 +148,13 @@ class ResidentRepositoryImpl implements ResidentRepository {
     return _firestore
         .collection('visitor_logs')
         .where('flatNumber', isEqualTo: flatNumber)
-        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => CheckInModel.fromMap(doc.data(), doc.id))
           .toList();
+      list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return list;
     });
   }
 
