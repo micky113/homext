@@ -6,8 +6,10 @@ import '../../../../core/utils/constants.dart';
 import '../../../guard/domain/entities/checkin_entity.dart';
 import '../../../guard/data/models/checkin_model.dart';
 import '../../domain/entities/invite_entity.dart';
+import '../../domain/entities/notice_entity.dart';
 import '../../domain/repositories/resident_repository.dart';
 import '../models/invite_model.dart';
+import '../models/notice_model.dart';
 
 class ResidentRepositoryImpl implements ResidentRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -170,5 +172,221 @@ class ResidentRepositoryImpl implements ResidentRepository {
     await _firestore.collection('visitor_logs').doc(checkinId).update({
       'status': status,
     });
+  }
+
+  @override
+  Stream<List<NoticeEntity>> streamNotices(String societyId) {
+    if (AppConstants.useMockData) {
+      return _mockData.noticesStream.map((notices) {
+        return notices.where((n) => n.societyId == societyId).toList();
+      });
+    }
+
+    return _firestore
+        .collection('notices')
+        .where('societyId', isEqualTo: societyId)
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs
+          .map((doc) => NoticeModel.fromMap(doc.data(), doc.id))
+          .toList();
+      list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return list;
+    });
+  }
+
+  @override
+  Future<void> postNotice({
+    required String societyId,
+    required String title,
+    required String content,
+    required String postedBy,
+  }) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.postNotice(
+        societyId: societyId,
+        title: title,
+        content: content,
+        postedBy: postedBy,
+      );
+    }
+
+    final docRef = _firestore.collection('notices').doc();
+    final model = NoticeModel(
+      id: docRef.id,
+      title: title,
+      content: content,
+      timestamp: DateTime.now(),
+      societyId: societyId,
+      postedBy: postedBy,
+    );
+
+    await docRef.set(model.toMap());
+  }
+
+  @override
+  Future<void> payDues({required String userId}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.payDues(userId);
+    }
+
+    await _firestore.collection('residents').doc(userId).update({
+      'metadata.maintenancePaid': 'true',
+      'metadata.charges': [],
+      'metadata.pendingDues': '0',
+      'metadata.paymentStatus': 'paid',
+      'metadata.paymentRemarks': '',
+    });
+  }
+
+  @override
+  Future<void> rejectPayment({required String userId}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.rejectPayment(userId);
+    }
+
+    await _firestore.collection('residents').doc(userId).update({
+      'metadata.paymentStatus': 'unpaid',
+      'metadata.paymentRemarks': '',
+    });
+  }
+
+  @override
+  Future<void> submitPaymentVerification({required String userId, required String remarks}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.submitPaymentVerification(userId, remarks);
+    }
+
+    await _firestore.collection('residents').doc(userId).update({
+      'metadata.paymentStatus': 'pending_confirmation',
+      'metadata.paymentRemarks': remarks,
+    });
+  }
+
+  @override
+  Stream<String> streamMonthlyMaintenance(String societyId) {
+    if (AppConstants.useMockData) {
+      return _mockData.streamMonthlyMaintenance(societyId);
+    }
+
+    return _firestore
+        .collection('societies')
+        .doc(societyId)
+        .snapshots()
+        .map((doc) {
+      if (doc.exists) {
+        return doc.data()?['monthlyMaintenance']?.toString() ?? '2500';
+      }
+      return '2500';
+    });
+  }
+
+  @override
+  Future<void> updateMonthlyMaintenance({required String societyId, required String amount}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.updateMonthlyMaintenance(societyId, amount);
+    }
+
+    await _firestore.collection('societies').doc(societyId).set({
+      'monthlyMaintenance': amount,
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> addCustomCharge({required String userId, required String title, required String amount}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.addCustomCharge(userId, title, amount);
+    }
+
+    final docRef = _firestore.collection('residents').doc(userId);
+    final docSnap = await docRef.get();
+    if (docSnap.exists) {
+      final data = docSnap.data();
+      final metadata = Map<String, dynamic>.from(data?['metadata'] as Map? ?? {});
+      
+      final currentPending = double.tryParse(metadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      final chargeAmt = double.tryParse(amount) ?? 0.0;
+      final newPending = currentPending + chargeAmt;
+      
+      final charge = {
+        'id': 'charge-${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'amount': amount,
+      };
+
+      await docRef.update({
+        'metadata.charges': FieldValue.arrayUnion([charge]),
+        'metadata.pendingDues': newPending.toStringAsFixed(0),
+        'metadata.paymentStatus': 'unpaid',
+        'metadata.paymentRemarks': '',
+      });
+    }
+  }
+
+  @override
+  Future<void> generateMonthlyBills({required String societyId}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.generateMonthlyBills(societyId);
+    }
+
+    final query = await _firestore
+        .collection('residents')
+        .where('metadata.societyId', isEqualTo: societyId)
+        .get();
+
+    // Query fixed monthly maintenance amount
+    final societyDoc = await _firestore.collection('societies').doc(societyId).get();
+    final fixedFee = double.tryParse(societyDoc.data()?['monthlyMaintenance']?.toString() ?? '2500') ?? 2500.0;
+
+    final batch = _firestore.batch();
+    for (final doc in query.docs) {
+      final data = doc.data();
+      final metadata = Map<String, dynamic>.from(data['metadata'] as Map? ?? {});
+      final currentPending = double.tryParse(metadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      final newPending = currentPending + fixedFee;
+
+      batch.update(doc.reference, {
+        'metadata.maintenancePaid': 'false',
+        'metadata.pendingDues': newPending.toStringAsFixed(0),
+        'metadata.paymentStatus': 'unpaid',
+        'metadata.paymentRemarks': '',
+      });
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<void> billSpecialCharge({required String societyId, required String title, required String amount}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.billSpecialCharge(societyId, title, amount);
+    }
+
+    final query = await _firestore
+        .collection('residents')
+        .where('metadata.societyId', isEqualTo: societyId)
+        .get();
+
+    final fee = double.tryParse(amount) ?? 0.0;
+    final charge = {
+      'id': 'charge-${DateTime.now().millisecondsSinceEpoch}',
+      'title': title,
+      'amount': amount,
+    };
+
+    final batch = _firestore.batch();
+    for (final doc in query.docs) {
+      final data = doc.data();
+      final metadata = Map<String, dynamic>.from(data['metadata'] as Map? ?? {});
+      final currentPending = double.tryParse(metadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      final newPending = currentPending + fee;
+
+      batch.update(doc.reference, {
+        'metadata.charges': FieldValue.arrayUnion([charge]),
+        'metadata.pendingDues': newPending.toStringAsFixed(0),
+        'metadata.paymentStatus': 'unpaid',
+        'metadata.paymentRemarks': '',
+      });
+    }
+    await batch.commit();
   }
 }

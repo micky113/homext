@@ -206,7 +206,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Stream<List<UserEntity>> streamSocietyMembers(String societyId) {
     if (AppConstants.useMockData) {
-      return _mockData.streamSocietyMembers(societyId);
+      return _mockData.streamSocietyMembers(societyId).map((list) => list.map((m) => m as UserEntity).toList());
     }
 
     final controller = StreamController<List<UserEntity>>.broadcast();

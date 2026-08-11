@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_drawer.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -26,7 +27,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       final residentProvider = Provider.of<ResidentProvider>(context, listen: false);
       final user = authProvider.currentUser;
       if (user != null) {
-        residentProvider.initialize(user.uid, user.flatNumber);
+        residentProvider.initialize(user.uid, user.flatNumber, user.metadata['societyId'] ?? '');
       }
       _initialized = true;
     }
@@ -130,7 +131,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                                       );
                                       if (success && context.mounted) {
                                         final residentProvider = Provider.of<ResidentProvider>(context, listen: false);
-                                        residentProvider.initialize(user.uid, flatController.text.trim());
+                                        residentProvider.initialize(user.uid, flatController.text.trim(), user.metadata['societyId'] ?? '');
                                         Navigator.of(context).pop();
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
@@ -196,7 +197,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: () async {
-                residentProvider.initialize(user.uid, user.flatNumber);
+                residentProvider.initialize(user.uid, user.flatNumber, user.metadata['societyId'] ?? '');
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -362,6 +363,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                               ),
                     const SizedBox(height: 32),
                     _buildHistoryList(context, residentProvider),
+                    const SizedBox(height: 32),
+                    _buildSocietySection(context, residentProvider, user),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -581,5 +584,206 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     final hour = time.hour.toString().padLeft(2, '0');
     final min = time.minute.toString().padLeft(2, '0');
     return '${time.day}/${time.month} $hour:$min';
+  }
+
+  Widget _buildSocietySection(BuildContext context, ResidentProvider provider, UserEntity user) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final notices = provider.notices;
+    
+    final maintenancePaid = user.metadata['maintenancePaid'] == 'true';
+    final monthlyMaintenance = double.tryParse(provider.monthlyMaintenance) ?? 2500.0;
+    
+    final chargesList = user.metadata['charges'] as List? ?? [];
+    double customSum = 0.0;
+    for (final c in chargesList) {
+      customSum += double.tryParse(c['amount']?.toString() ?? '0') ?? 0.0;
+    }
+    
+    final dues = (maintenancePaid ? 0.0 : monthlyMaintenance) + customSum;
+    
+    final latestNoticeTitle = notices.isNotEmpty 
+        ? notices.first.title 
+        : 'No notices posted yet';
+    final latestNoticeDate = notices.isNotEmpty 
+        ? '${notices.first.timestamp.day}/${notices.first.timestamp.month}/${notices.first.timestamp.year}' 
+        : '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Society & Notices',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit',
+                  ),
+            ),
+            const Icon(Icons.business_rounded, color: AppColors.primary),
+          ],
+        ),
+        const SizedBox(height: 12),
+        InkWell(
+          onTap: () => GoRouter.of(context).push('/society-details'),
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppColors.glassBorder : AppColors.lightSurfaceLight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 30 : 10),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: dues > 0 
+                            ? AppColors.error.withAlpha(20) 
+                            : AppColors.secondary.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        dues > 0 ? Icons.payment_rounded : Icons.check_circle_rounded,
+                        color: dues > 0 ? AppColors.error : AppColors.secondary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Maintenance Dues',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Text(
+                            dues > 0 ? '₹${dues.toStringAsFixed(0)} Pending' : 'All Dues Paid',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: dues > 0 ? AppColors.error : AppColors.secondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.campaign_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Latest Announcement',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              if (latestNoticeDate.isNotEmpty)
+                                Text(
+                                  latestNoticeDate,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            latestNoticeTitle,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (notices.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              notices.first.content,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'View Notice Board & Dues',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

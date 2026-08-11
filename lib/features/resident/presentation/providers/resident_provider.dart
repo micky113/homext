@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../data/repositories/resident_repository_impl.dart';
 import '../../../guard/domain/entities/checkin_entity.dart';
 import '../../domain/entities/invite_entity.dart';
+import '../../domain/entities/notice_entity.dart';
 import '../../domain/usecases/create_invite_usecase.dart';
 import '../../domain/usecases/stream_invites_usecase.dart';
 import '../../domain/usecases/respond_to_visitor_alert_usecase.dart';
@@ -19,13 +20,17 @@ class ResidentProvider extends ChangeNotifier {
 
   List<InviteEntity> _invites = [];
   List<CheckInEntity> _history = [];
-  CheckInEntity? _activeAlert; // Currently pending checkin alert
+  List<NoticeEntity> _notices = [];
+  String _monthlyMaintenance = '2500';
+  CheckInEntity? _activeAlert; 
   bool _isLoading = false;
   String? _errorMessage;
 
   StreamSubscription<List<InviteEntity>>? _invitesSubscription;
   StreamSubscription<CheckInEntity>? _alertsSubscription;
   StreamSubscription<List<CheckInEntity>>? _historySubscription;
+  StreamSubscription<List<NoticeEntity>>? _noticesSubscription;
+  StreamSubscription<String>? _maintenanceSubscription;
 
   ResidentProvider()
       : _createInviteUseCase = CreateInviteUseCase(ResidentRepositoryImpl()),
@@ -36,12 +41,14 @@ class ResidentProvider extends ChangeNotifier {
 
   List<InviteEntity> get invites => _invites;
   List<CheckInEntity> get history => _history;
+  List<NoticeEntity> get notices => _notices;
+  String get monthlyMaintenance => _monthlyMaintenance;
   CheckInEntity? get activeAlert => _activeAlert;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
   // Initialize data queries once resident user profile is ready
-  void initialize(String userId, String flatNumber) {
+  void initialize(String userId, String flatNumber, String societyId) {
     _stopListening();
     _isLoading = true;
 
@@ -81,6 +88,28 @@ class ResidentProvider extends ChangeNotifier {
       },
       onError: (err) {
         developer.log("Error streaming visitor history: $err");
+      },
+    );
+
+    // 4. Stream society notices matching this societyId
+    _noticesSubscription = ResidentRepositoryImpl().streamNotices(societyId).listen(
+      (data) {
+        _notices = data;
+        notifyListeners();
+      },
+      onError: (err) {
+        developer.log("Error streaming notices: $err");
+      },
+    );
+
+    // 5. Stream society monthly maintenance
+    _maintenanceSubscription = ResidentRepositoryImpl().streamMonthlyMaintenance(societyId).listen(
+      (amount) {
+        _monthlyMaintenance = amount;
+        notifyListeners();
+      },
+      onError: (err) {
+        developer.log("Error streaming monthly maintenance: $err");
       },
     );
   }
@@ -137,12 +166,58 @@ class ResidentProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> payDues(String userId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await ResidentRepositoryImpl().payDues(userId: userId);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      developer.log("Error paying dues: $e");
+      notifyListeners();
+    }
+  }
+
+  Future<void> rejectPayment(String userId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await ResidentRepositoryImpl().rejectPayment(userId: userId);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      developer.log("Error rejecting payment: $e");
+      notifyListeners();
+    }
+  }
+
+  Future<void> submitPaymentVerification({required String userId, required String remarks}) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await ResidentRepositoryImpl().submitPaymentVerification(userId: userId, remarks: remarks);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      developer.log("Error submitting payment verification: $e");
+      notifyListeners();
+    }
+  }
+
   void _stopListening() {
     _invitesSubscription?.cancel();
     _alertsSubscription?.cancel();
     _historySubscription?.cancel();
+    _noticesSubscription?.cancel();
+    _maintenanceSubscription?.cancel();
     _invites = [];
     _history = [];
+    _notices = [];
+    _monthlyMaintenance = '2500';
     _activeAlert = null;
   }
 

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import '../../features/auth/data/models/user_model.dart';
 import '../../features/guard/data/models/checkin_model.dart';
 import '../../features/resident/data/models/invite_model.dart';
+import '../../features/resident/data/models/notice_model.dart';
 
 class MockDataService {
   // Singleton
@@ -54,6 +56,41 @@ class MockDataService {
         hostName: 'Amit Sharma',
       ),
     ]);
+
+    _notices.addAll([
+      NoticeModel(
+        id: 'notice-1',
+        title: 'Annual General Meeting (AGM)',
+        content: 'Dear Residents, our Annual General Meeting is scheduled for this Sunday at 10:00 AM in the clubhouse. Please make sure to attend as we will discuss the upcoming painting project.',
+        timestamp: DateTime.now().subtract(const Duration(days: 1)),
+        societyId: 'homext_heights',
+        postedBy: 'Homext Heights Admin',
+      ),
+      NoticeModel(
+        id: 'notice-2',
+        title: 'Water Supply Interruption',
+        content: 'Please note that there will be a temporary water supply interruption this Wednesday from 2:00 PM to 5:00 PM due to regular overhead tank cleaning. Kindly store sufficient water.',
+        timestamp: DateTime.now().subtract(const Duration(days: 3)),
+        societyId: 'homext_heights',
+        postedBy: 'Homext Heights Admin',
+      ),
+      NoticeModel(
+        id: 'notice-3',
+        title: 'Independence Day Celebration',
+        content: 'We invite all residents to join the flag hoisting ceremony at 8:30 AM in the main park, followed by cultural programs and high tea.',
+        timestamp: DateTime.now().subtract(const Duration(days: 5)),
+        societyId: 'homext_heights',
+        postedBy: 'Homext Heights Admin',
+      ),
+      NoticeModel(
+        id: 'notice-4',
+        title: 'Power Maintenance Shutdown',
+        content: 'There will be a power shutdown on Saturday from 10:00 AM to 1:00 PM for transformer servicing.',
+        timestamp: DateTime.now().subtract(const Duration(days: 2)),
+        societyId: 'sunrise_apartments',
+        postedBy: 'Sunrise Apartments Admin',
+      )
+    ]);
   }
 
   // Active Simulated Users
@@ -62,7 +99,17 @@ class MockDataService {
       uid: 'resident-1',
       name: 'Amit Sharma',
       role: 'RESIDENT',
-      metadata: {'flatNumber': 'A-402', 'societyId': 'homext_heights', 'societyName': 'Homext Heights', 'phone': '+919876543210'},
+      metadata: {
+        'flatNumber': 'A-402',
+        'societyId': 'homext_heights',
+        'societyName': 'Homext Heights',
+        'phone': '+919876543210',
+        'pendingDues': '2000',
+        'maintenancePaid': 'false',
+        'charges': <Map<String, String>>[],
+        'paymentStatus': 'unpaid',
+        'paymentRemarks': '',
+      },
       fcmToken: 'mock-fcm-token-resident',
     ),
     UserModel(
@@ -76,7 +123,17 @@ class MockDataService {
       uid: 'resident-2',
       name: 'John Doe',
       role: 'RESIDENT',
-      metadata: {'flatNumber': 'B-305', 'societyId': 'sunrise_apartments', 'societyName': 'Sunrise Apartments', 'phone': '+919876543214'},
+      metadata: {
+        'flatNumber': 'B-305',
+        'societyId': 'sunrise_apartments',
+        'societyName': 'Sunrise Apartments',
+        'phone': '+919876543214',
+        'pendingDues': '2500',
+        'maintenancePaid': 'false',
+        'charges': <Map<String, String>>[],
+        'paymentStatus': 'unpaid',
+        'paymentRemarks': '',
+      },
       fcmToken: 'mock-fcm-token-resident2',
     ),
     UserModel(
@@ -133,12 +190,18 @@ class MockDataService {
   // Simulated Database Stores
   final List<CheckInModel> _checkins = [];
   final List<InviteModel> _invites = [];
+  final List<NoticeModel> _notices = [];
+  final Map<String, String> _societyMaintenance = {'homext_heights': '2000', 'sunrise_apartments': '2500'};
+  final StreamController<Map<String, String>> _societyMaintenanceStreamController = 
+      StreamController<Map<String, String>>.broadcast();
 
   // Stream Controllers for Real-Time Updates
   final StreamController<List<CheckInModel>> _checkinsStreamController = 
       StreamController<List<CheckInModel>>.broadcast();
   final StreamController<List<InviteModel>> _invitesStreamController = 
       StreamController<List<InviteModel>>.broadcast();
+  final StreamController<List<NoticeModel>> _noticesStreamController = 
+      StreamController<List<NoticeModel>>.broadcast();
   
   // Custom Broadcast Channel for Incoming visitor alerts (SIMULATING FCM payloads)
   final StreamController<CheckInModel> _incomingAlertStreamController = 
@@ -148,16 +211,20 @@ class MockDataService {
   UserModel? _currentUser;
   final StreamController<UserModel?> _authStreamController = 
       StreamController<UserModel?>.broadcast();
+  final StreamController<void> _usersUpdateController = 
+      StreamController<void>.broadcast();
 
   // Getters
   Stream<UserModel?> get onAuthStateChanged => _authStreamController.stream;
   Stream<List<CheckInModel>> get checkinsStream => _checkinsStreamController.stream;
   Stream<List<InviteModel>> get invitesStream => _invitesStreamController.stream;
   Stream<CheckInModel> get incomingAlertsStream => _incomingAlertStreamController.stream;
+  Stream<List<NoticeModel>> get noticesStream => _noticesStreamController.stream;
 
   UserModel? get currentUser => _currentUser;
   List<CheckInModel> get checkins => List.unmodifiable(_checkins);
   List<InviteModel> get invites => List.unmodifiable(_invites);
+  List<NoticeModel> get notices => List.unmodifiable(_notices);
 
   // Temporary storage of active mock verification flows
   String? _mockVerificationId;
@@ -391,20 +458,36 @@ class MockDataService {
   }
 
   Stream<List<UserModel>> streamSocietyMembers(String societyId) {
+    debugPrint("DEBUG: streamSocietyMembers called for societyId: $societyId");
     final controller = StreamController<List<UserModel>>.broadcast();
     
     // Push initial
     final initial = _users.where((u) => u.metadata['societyId'] == societyId).toList();
+    debugPrint("DEBUG: streamSocietyMembers initial count: ${initial.length} for $societyId");
     controller.add(initial);
     
     // Listen to changes
-    final sub = onAuthStateChanged.listen((_) {
+    final sub = onAuthStateChanged.listen((user) {
+      debugPrint("DEBUG: streamSocietyMembers onAuthStateChanged fired. Current user: ${user?.name}");
       final updated = _users.where((u) => u.metadata['societyId'] == societyId).toList();
+      debugPrint("DEBUG: streamSocietyMembers emitting updated list. Count: ${updated.length}");
+      controller.add(updated);
+    });
+
+    final sub2 = _usersUpdateController.stream.listen((_) {
+      debugPrint("DEBUG: streamSocietyMembers _usersUpdateController fired.");
+      final updated = _users.where((u) => u.metadata['societyId'] == societyId).toList();
+      debugPrint("DEBUG: streamSocietyMembers emitting updated list from database trigger. Count: ${updated.length}");
+      for (final u in updated) {
+        debugPrint("   -> ${u.name}: pendingDues = ${u.metadata['pendingDues']}");
+      }
       controller.add(updated);
     });
     
     controller.onCancel = () {
+      debugPrint("DEBUG: streamSocietyMembers stream cancelled for $societyId");
       sub.cancel();
+      sub2.cancel();
     };
     
     return controller.stream;
@@ -493,10 +576,252 @@ class MockDataService {
     return existsInPreReg;
   }
 
+  Future<void> postNotice({
+    required String societyId,
+    required String title,
+    required String content,
+    required String postedBy,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final newNotice = NoticeModel(
+      id: 'notice-${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      content: content,
+      timestamp: DateTime.now(),
+      societyId: societyId,
+      postedBy: postedBy,
+    );
+    _notices.insert(0, newNotice);
+    _noticesStreamController.add(List.from(_notices));
+  }
+
+  Future<void> payDues(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    final index = _users.indexWhere((u) => u.uid == userId);
+    if (index != -1) {
+      final user = _users[index];
+      final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+      updatedMetadata['maintenancePaid'] = 'true';
+      updatedMetadata['charges'] = <Map<String, String>>[];
+      updatedMetadata['pendingDues'] = '0';
+      updatedMetadata['paymentStatus'] = 'paid';
+      updatedMetadata['paymentRemarks'] = '';
+      _users[index] = user.copyWith(metadata: updatedMetadata);
+      
+      if (_currentUser?.uid == userId) {
+        _currentUser = _users[index];
+        _authStreamController.add(_currentUser);
+      }
+      _usersUpdateController.add(null);
+    }
+  }
+
+  Future<void> rejectPayment(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _users.indexWhere((u) => u.uid == userId);
+    if (index != -1) {
+      final user = _users[index];
+      final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+      updatedMetadata['paymentStatus'] = 'unpaid';
+      updatedMetadata['paymentRemarks'] = '';
+      _users[index] = user.copyWith(metadata: updatedMetadata);
+
+      if (_currentUser?.uid == userId) {
+        _currentUser = _users[index];
+        _authStreamController.add(_currentUser);
+      }
+      _usersUpdateController.add(null);
+    }
+  }
+
+  Future<void> submitPaymentVerification(String userId, String remarks) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _users.indexWhere((u) => u.uid == userId);
+    if (index != -1) {
+      final user = _users[index];
+      final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+      updatedMetadata['paymentStatus'] = 'pending_confirmation';
+      updatedMetadata['paymentRemarks'] = remarks;
+      _users[index] = user.copyWith(metadata: updatedMetadata);
+
+      if (_currentUser?.uid == userId) {
+        _currentUser = _users[index];
+        _authStreamController.add(_currentUser);
+      }
+      _usersUpdateController.add(null);
+    }
+  }
+
+  Stream<String> streamMonthlyMaintenance(String societyId) {
+    final controller = StreamController<String>.broadcast();
+    controller.add(_societyMaintenance[societyId] ?? '2500');
+    
+    final sub = _societyMaintenanceStreamController.stream.listen((data) {
+      controller.add(data[societyId] ?? '2500');
+    });
+    
+    controller.onCancel = () => sub.cancel();
+    return controller.stream;
+  }
+
+  Future<void> updateMonthlyMaintenance(String societyId, String amount) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _societyMaintenance[societyId] = amount;
+    _societyMaintenanceStreamController.add(Map.from(_societyMaintenance));
+    
+    for (int i = 0; i < _users.length; i++) {
+      final user = _users[i];
+      if (user.role == 'RESIDENT' && user.metadata['societyId'] == societyId) {
+        final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+        final paid = updatedMetadata['maintenancePaid'] == 'true';
+        final chargesList = updatedMetadata['charges'] as List? ?? [];
+        double customSum = 0;
+        for (final c in chargesList) {
+          customSum += double.tryParse(c['amount']?.toString() ?? '0') ?? 0;
+        }
+        final total = (paid ? 0.0 : (double.tryParse(amount) ?? 0.0)) + customSum;
+        updatedMetadata['pendingDues'] = total.toStringAsFixed(0);
+        _users[i] = user.copyWith(metadata: updatedMetadata);
+      }
+    }
+    
+    final current = _currentUser;
+    if (current != null) {
+      final match = _users.firstWhere((u) => u.uid == current.uid, orElse: () => current);
+      _currentUser = match;
+      _authStreamController.add(_currentUser);
+    }
+    _usersUpdateController.add(null);
+  }
+
+  Future<void> addCustomCharge(String userId, String title, String amount) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _users.indexWhere((u) => u.uid == userId);
+    if (index != -1) {
+      final user = _users[index];
+      final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+      
+      final List<Map<String, String>> charges = List.from(
+        (updatedMetadata['charges'] as List?)?.map((item) => Map<String, String>.from(item as Map)) ?? []
+      );
+      
+      charges.add({
+        'id': 'charge-${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'amount': amount,
+      });
+      updatedMetadata['charges'] = charges;
+      updatedMetadata['paymentStatus'] = 'unpaid';
+      updatedMetadata['paymentRemarks'] = '';
+      
+      final societyId = updatedMetadata['societyId'] ?? '';
+      final fixedFee = double.tryParse(_societyMaintenance[societyId] ?? '2500') ?? 2500.0;
+      final paid = updatedMetadata['maintenancePaid'] == 'true';
+      
+      double customSum = 0;
+      for (final c in charges) {
+        customSum += double.tryParse(c['amount']?.toString() ?? '0') ?? 0;
+      }
+      final total = (paid ? 0.0 : fixedFee) + customSum;
+      updatedMetadata['pendingDues'] = total.toStringAsFixed(0);
+      
+      _users[index] = user.copyWith(metadata: updatedMetadata);
+      
+      if (_currentUser?.uid == userId) {
+        _currentUser = _users[index];
+        _authStreamController.add(_currentUser);
+      }
+      _usersUpdateController.add(null);
+    }
+  }
+
+  Future<void> generateMonthlyBills(String societyId) async {
+    debugPrint("DEBUG: generateMonthlyBills called for societyId: $societyId");
+    await Future.delayed(const Duration(milliseconds: 400));
+    final fixedFee = double.tryParse(_societyMaintenance[societyId] ?? '2500') ?? 2500.0;
+    debugPrint("DEBUG: generateMonthlyBills fixedFee for $societyId is $fixedFee");
+    
+    int matchCount = 0;
+    for (int i = 0; i < _users.length; i++) {
+      final user = _users[i];
+      if (user.role == 'RESIDENT' && user.metadata['societyId'] == societyId) {
+        matchCount++;
+        final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+        
+        final double currentPending = double.tryParse(updatedMetadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+        final double newPending = currentPending + fixedFee;
+        
+        debugPrint("DEBUG: Resident ${user.name} dues update: $currentPending -> $newPending");
+        
+        updatedMetadata['pendingDues'] = newPending.toStringAsFixed(0);
+        updatedMetadata['maintenancePaid'] = 'false';
+        updatedMetadata['paymentStatus'] = 'unpaid';
+        updatedMetadata['paymentRemarks'] = '';
+        
+        _users[i] = user.copyWith(metadata: updatedMetadata);
+      }
+    }
+    debugPrint("DEBUG: generateMonthlyBills processed $matchCount residents.");
+    
+    final current = _currentUser;
+    if (current != null) {
+      final match = _users.firstWhere((u) => u.uid == current.uid, orElse: () => current);
+      _currentUser = match;
+      debugPrint("DEBUG: generateMonthlyBills adding current user ${_currentUser?.name} to auth stream.");
+      _authStreamController.add(_currentUser);
+    }
+    debugPrint("DEBUG: generateMonthlyBills triggering database updates stream.");
+    _usersUpdateController.add(null);
+  }
+
+  Future<void> billSpecialCharge(String societyId, String title, String amount) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    final fee = double.tryParse(amount) ?? 0.0;
+    
+    for (int i = 0; i < _users.length; i++) {
+      final user = _users[i];
+      if (user.role == 'RESIDENT' && user.metadata['societyId'] == societyId) {
+        final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+        
+        final List<Map<String, String>> charges = List.from(
+          (updatedMetadata['charges'] as List?)?.map((item) => Map<String, String>.from(item as Map)) ?? []
+        );
+        
+        final charge = {
+          'id': 'charge-${DateTime.now().millisecondsSinceEpoch}',
+          'title': title,
+          'amount': amount,
+        };
+        
+        charges.add(charge);
+        updatedMetadata['charges'] = charges;
+        
+        final double currentPending = double.tryParse(updatedMetadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+        final double newPending = currentPending + fee;
+        
+        updatedMetadata['pendingDues'] = newPending.toStringAsFixed(0);
+        updatedMetadata['paymentStatus'] = 'unpaid';
+        updatedMetadata['paymentRemarks'] = '';
+        
+        _users[i] = user.copyWith(metadata: updatedMetadata);
+      }
+    }
+    
+    final current = _currentUser;
+    if (current != null) {
+      final match = _users.firstWhere((u) => u.uid == current.uid, orElse: () => current);
+      _currentUser = match;
+      _authStreamController.add(_currentUser);
+    }
+    _usersUpdateController.add(null);
+  }
+
   // Helper to trigger initial streams
   void initStreams() {
     _checkinsStreamController.add(List.from(_checkins));
     _invitesStreamController.add(List.from(_invites));
+    _noticesStreamController.add(List.from(_notices));
+    _societyMaintenanceStreamController.add(Map.from(_societyMaintenance));
     _authStreamController.add(_currentUser);
   }
 }

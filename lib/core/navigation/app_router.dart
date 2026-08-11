@@ -5,6 +5,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/guard/presentation/screens/guard_dashboard_screen.dart';
 import '../../features/resident/presentation/screens/resident_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
+import '../../features/resident/presentation/screens/society_details_screen.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthProvider authProvider) {
@@ -69,6 +70,10 @@ class AppRouter {
         GoRoute(
           path: '/admin/dashboard',
           builder: (context, state) => const AdminDashboardScreen(),
+        ),
+        GoRoute(
+          path: '/society-details',
+          builder: (context, state) => const SocietyDetailsScreen(),
         ),
       ],
       errorBuilder: (context, state) => Scaffold(
