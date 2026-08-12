@@ -386,14 +386,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.orange),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.hourglass_empty_rounded, color: Colors.orange, size: 10),
-                    SizedBox(width: 2),
+                    const Icon(Icons.hourglass_empty_rounded, color: Colors.orange, size: 10),
+                    const SizedBox(width: 2),
                     Text(
-                      'Verify',
-                      style: TextStyle(
+                      'Verify ₹${member.metadata['pendingPaymentAmount'] ?? ''}',
+                      style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                         color: Colors.orange,
@@ -1457,15 +1457,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         if (paymentStatus == 'pending_confirmation') ...[
                           const SizedBox(height: 12),
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: Colors.orange.withAlpha(20),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.orange),
+                              border: Border.all(color: Colors.orange.withAlpha(50)),
                             ),
-                            child: Text(
-                              'Verification Remarks: $remarks',
-                              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.orange),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Amount Transferred:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                    Text('₹${member.metadata['pendingPaymentAmount'] ?? '0'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Remarks/Ref: $remarks',
+                                  style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.orange),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -1582,12 +1595,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         isSaving = true;
                       });
                       try {
-                        await ResidentRepositoryImpl().payDues(userId: member.uid);
+                        await ResidentRepositoryImpl().confirmPayment(userId: member.uid);
                         if (context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Payment confirmed! Dues cleared.'),
+                              content: Text('Payment confirmed successfully!'),
                               backgroundColor: AppColors.secondary,
                             ),
                           );

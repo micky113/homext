@@ -236,7 +236,30 @@ class ResidentRepositoryImpl implements ResidentRepository {
       'metadata.pendingDues': '0',
       'metadata.paymentStatus': 'paid',
       'metadata.paymentRemarks': '',
+      'metadata.pendingPaymentAmount': '0',
     });
+  }
+
+  @override
+  Future<void> confirmPayment({required String userId}) async {
+    if (AppConstants.useMockData) {
+      return await _mockData.confirmPayment(userId);
+    }
+
+    final docRef = _firestore.collection('residents').doc(userId);
+    final docSnap = await docRef.get();
+    if (docSnap.exists) {
+      final data = docSnap.data();
+      final metadata = data?['metadata'] as Map? ?? {};
+      final pendingDuesStr = metadata['pendingDues']?.toString() ?? '0';
+      final double pending = double.tryParse(pendingDuesStr) ?? 0.0;
+      
+      await docRef.update({
+        'metadata.paymentStatus': pending == 0 ? 'paid' : 'unpaid',
+        'metadata.paymentRemarks': '',
+        'metadata.pendingPaymentAmount': '0',
+      });
+    }
   }
 
   @override
@@ -245,22 +268,50 @@ class ResidentRepositoryImpl implements ResidentRepository {
       return await _mockData.rejectPayment(userId);
     }
 
-    await _firestore.collection('residents').doc(userId).update({
-      'metadata.paymentStatus': 'unpaid',
-      'metadata.paymentRemarks': '',
-    });
+    final docRef = _firestore.collection('residents').doc(userId);
+    final docSnap = await docRef.get();
+    if (docSnap.exists) {
+      final data = docSnap.data();
+      final metadata = data?['metadata'] as Map? ?? {};
+      
+      final currentPending = double.tryParse(metadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      final pendingPayment = double.tryParse(metadata['pendingPaymentAmount']?.toString() ?? '0') ?? 0.0;
+      final double restoredDues = currentPending + pendingPayment;
+      
+      await docRef.update({
+        'metadata.pendingDues': restoredDues.toStringAsFixed(0),
+        'metadata.paymentStatus': 'unpaid',
+        'metadata.paymentRemarks': '',
+        'metadata.pendingPaymentAmount': '0',
+        'metadata.maintenancePaid': 'false',
+      });
+    }
   }
 
   @override
-  Future<void> submitPaymentVerification({required String userId, required String remarks}) async {
+  Future<void> submitPaymentVerification({required String userId, required String remarks, required String amountPaid}) async {
     if (AppConstants.useMockData) {
-      return await _mockData.submitPaymentVerification(userId, remarks);
+      return await _mockData.submitPaymentVerification(userId, remarks, amountPaid);
     }
 
-    await _firestore.collection('residents').doc(userId).update({
-      'metadata.paymentStatus': 'pending_confirmation',
-      'metadata.paymentRemarks': remarks,
-    });
+    final docRef = _firestore.collection('residents').doc(userId);
+    final docSnap = await docRef.get();
+    if (docSnap.exists) {
+      final data = docSnap.data();
+      final metadata = data?['metadata'] as Map? ?? {};
+      
+      final currentPending = double.tryParse(metadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      final paidVal = double.tryParse(amountPaid) ?? 0.0;
+      final double newPending = (currentPending - paidVal) < 0 ? 0.0 : (currentPending - paidVal);
+      
+      await docRef.update({
+        'metadata.pendingDues': newPending.toStringAsFixed(0),
+        'metadata.paymentStatus': 'pending_confirmation',
+        'metadata.paymentRemarks': remarks,
+        'metadata.pendingPaymentAmount': amountPaid,
+        'metadata.maintenancePaid': newPending == 0 ? 'true' : 'false',
+      });
+    }
   }
 
   @override

@@ -18,9 +18,11 @@ class AuthRepositoryImpl implements AuthRepository {
       return _mockData.onAuthStateChanged;
     }
     
-    return _firebaseAuth.authStateChanges().asyncMap((firebaseUser) async {
-      if (firebaseUser == null) return null;
-      return await _getUserFromFirestore(firebaseUser.uid);
+    return _firebaseAuth.authStateChanges().asyncExpand((firebaseUser) {
+      if (firebaseUser == null) {
+        return Stream.value(null);
+      }
+      return _streamUserFromFirestore(firebaseUser.uid);
     });
   }
 
@@ -408,5 +410,38 @@ class AuthRepositoryImpl implements AuthRepository {
     } catch (e) {
       return null;
     }
+  }
+
+  Stream<UserEntity?> _streamUserFromFirestore(String uid) {
+    final controller = StreamController<UserEntity?>.broadcast();
+    
+    _getUserFromFirestore(uid).then((initialUser) {
+      if (initialUser == null) {
+        controller.add(null);
+        return;
+      }
+      
+      final role = initialUser.role;
+      final collectionName = role == 'RESIDENT' 
+          ? 'residents' 
+          : (role == 'GUARD' ? 'guards' : 'admins');
+          
+      final sub = _firestore.collection(collectionName).doc(uid).snapshots().listen((snapshot) {
+        if (snapshot.exists && snapshot.data() != null) {
+          final updatedUser = UserModel.fromMap(snapshot.data()!, uid).copyWith(role: role);
+          controller.add(updatedUser);
+        } else {
+          controller.add(null);
+        }
+      }, onError: (e) {
+        controller.addError(e);
+      });
+      
+      controller.onCancel = () => sub.cancel();
+    }).catchError((e) {
+      controller.addError(e);
+    });
+    
+    return controller.stream;
   }
 }

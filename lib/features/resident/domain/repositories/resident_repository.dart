@@ -26,8 +26,9 @@ abstract class ResidentRepository {
     required String postedBy,
   });
   Future<void> payDues({required String userId});
+  Future<void> confirmPayment({required String userId});
   Future<void> rejectPayment({required String userId});
-  Future<void> submitPaymentVerification({required String userId, required String remarks});
+  Future<void> submitPaymentVerification({required String userId, required String remarks, required String amountPaid});
   Stream<String> streamMonthlyMaintenance(String societyId);
   Future<void> updateMonthlyMaintenance({required String societyId, required String amount});
   Future<void> addCustomCharge({required String userId, required String title, required String amount});

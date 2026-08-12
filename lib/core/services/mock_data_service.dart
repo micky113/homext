@@ -91,6 +91,16 @@ class MockDataService {
         postedBy: 'Sunrise Apartments Admin',
       )
     ]);
+
+    // Keep logged-in user in sync on database updates
+    _usersUpdateController.stream.listen((_) {
+      final current = _currentUser;
+      if (current != null) {
+        final match = _users.firstWhere((u) => u.uid == current.uid, orElse: () => current);
+        _currentUser = match;
+        _authStreamController.add(_currentUser);
+      }
+    });
   }
 
   // Active Simulated Users
@@ -606,8 +616,32 @@ class MockDataService {
       updatedMetadata['pendingDues'] = '0';
       updatedMetadata['paymentStatus'] = 'paid';
       updatedMetadata['paymentRemarks'] = '';
+      updatedMetadata['pendingPaymentAmount'] = '0';
       _users[index] = user.copyWith(metadata: updatedMetadata);
       
+      if (_currentUser?.uid == userId) {
+        _currentUser = _users[index];
+        _authStreamController.add(_currentUser);
+      }
+      _usersUpdateController.add(null);
+    }
+  }
+
+  Future<void> confirmPayment(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _users.indexWhere((u) => u.uid == userId);
+    if (index != -1) {
+      final user = _users[index];
+      final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+      
+      final double pending = double.tryParse(updatedMetadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      
+      updatedMetadata['paymentStatus'] = pending == 0 ? 'paid' : 'unpaid';
+      updatedMetadata['paymentRemarks'] = '';
+      updatedMetadata['pendingPaymentAmount'] = '0';
+      
+      _users[index] = user.copyWith(metadata: updatedMetadata);
+
       if (_currentUser?.uid == userId) {
         _currentUser = _users[index];
         _authStreamController.add(_currentUser);
@@ -622,8 +656,17 @@ class MockDataService {
     if (index != -1) {
       final user = _users[index];
       final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+      
+      final double currentPending = double.tryParse(updatedMetadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      final double pendingPayment = double.tryParse(updatedMetadata['pendingPaymentAmount']?.toString() ?? '0') ?? 0.0;
+      final double restoredDues = currentPending + pendingPayment;
+      
+      updatedMetadata['pendingDues'] = restoredDues.toStringAsFixed(0);
       updatedMetadata['paymentStatus'] = 'unpaid';
       updatedMetadata['paymentRemarks'] = '';
+      updatedMetadata['pendingPaymentAmount'] = '0';
+      updatedMetadata['maintenancePaid'] = 'false';
+      
       _users[index] = user.copyWith(metadata: updatedMetadata);
 
       if (_currentUser?.uid == userId) {
@@ -634,14 +677,23 @@ class MockDataService {
     }
   }
 
-  Future<void> submitPaymentVerification(String userId, String remarks) async {
+  Future<void> submitPaymentVerification(String userId, String remarks, String amountPaid) async {
     await Future.delayed(const Duration(milliseconds: 300));
     final index = _users.indexWhere((u) => u.uid == userId);
     if (index != -1) {
       final user = _users[index];
       final Map<String, dynamic> updatedMetadata = Map.from(user.metadata);
+      
+      final double currentPending = double.tryParse(updatedMetadata['pendingDues']?.toString() ?? '0') ?? 0.0;
+      final double paidVal = double.tryParse(amountPaid) ?? 0.0;
+      final double newPending = (currentPending - paidVal) < 0 ? 0.0 : (currentPending - paidVal);
+      
+      updatedMetadata['pendingDues'] = newPending.toStringAsFixed(0);
       updatedMetadata['paymentStatus'] = 'pending_confirmation';
       updatedMetadata['paymentRemarks'] = remarks;
+      updatedMetadata['pendingPaymentAmount'] = amountPaid;
+      updatedMetadata['maintenancePaid'] = newPending == 0 ? 'true' : 'false';
+      
       _users[index] = user.copyWith(metadata: updatedMetadata);
 
       if (_currentUser?.uid == userId) {

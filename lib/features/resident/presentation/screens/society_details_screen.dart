@@ -16,7 +16,11 @@ class _SocietyDetailsScreenState extends State<SocietyDetailsScreen> {
 
   void _showPaymentSheet(BuildContext context, String userId, String duesStr) {
     final remarksController = TextEditingController();
+    final amountController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+
+    // Autofill with current outstanding dues by default
+    amountController.text = duesStr;
 
     showModalBottomSheet(
       context: context,
@@ -128,6 +132,30 @@ class _SocietyDetailsScreenState extends State<SocietyDetailsScreen> {
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Amount Paid (₹)',
+                        prefixIcon: Icon(Icons.currency_rupee_rounded),
+                        hintText: 'e.g. 2000',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter the amount paid';
+                        }
+                        final paid = double.tryParse(value);
+                        if (paid == null || paid <= 0) {
+                          return 'Please enter a valid amount';
+                        }
+                        final totalDues = double.tryParse(duesStr) ?? 0.0;
+                        if (paid > totalDues) {
+                          return 'Amount paid cannot exceed outstanding dues (₹$duesStr)';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
                       controller: remarksController,
                       decoration: const InputDecoration(
                         labelText: 'Transaction Ref ID / UPI ID',
@@ -159,6 +187,7 @@ class _SocietyDetailsScreenState extends State<SocietyDetailsScreen> {
                                 await provider.submitPaymentVerification(
                                   userId: userId,
                                   remarks: remarksController.text.trim(),
+                                  amountPaid: amountController.text.trim(),
                                 );
                                 
                                 if (context.mounted) {
@@ -173,7 +202,7 @@ class _SocietyDetailsScreenState extends State<SocietyDetailsScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
-                            child: Text('Submit Proof (₹$duesStr)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            child: const Text('Submit Proof', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
                   ],
                 ),
@@ -253,14 +282,9 @@ class _SocietyDetailsScreenState extends State<SocietyDetailsScreen> {
 
     final maintenancePaid = user.metadata['maintenancePaid'] == 'true';
     final monthlyMaintenance = double.tryParse(residentProvider.monthlyMaintenance) ?? 2500.0;
-    
     final chargesList = user.metadata['charges'] as List? ?? [];
-    double customSum = 0.0;
-    for (final c in chargesList) {
-      customSum += double.tryParse(c['amount']?.toString() ?? '0') ?? 0.0;
-    }
     
-    final dues = (maintenancePaid ? 0.0 : monthlyMaintenance) + customSum;
+    final dues = double.tryParse(user.metadata['pendingDues']?.toString() ?? '0') ?? 0.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -339,22 +363,45 @@ class _SocietyDetailsScreenState extends State<SocietyDetailsScreen> {
                         color: dues > 0 ? (isPending ? Colors.orange : AppColors.error) : AppColors.secondary,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isPending 
-                          ? 'Wait for admin to verify transaction' 
-                          : 'Maintenance Billing Period: Aug 2026',
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
+                     const SizedBox(height: 4),
                     if (isPending) ...[
                       const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withAlpha(20),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.withAlpha(50)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.hourglass_empty_rounded, color: Colors.orange, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Approval Pending: ₹${user.metadata['pendingPaymentAmount'] ?? '0'}',
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Text(
-                        'Details: ${user.metadata['paymentRemarks'] ?? ''}',
+                        'Ref: ${user.metadata['paymentRemarks'] ?? ''}',
                         style: TextStyle(
                           color: isDark ? Colors.orange[200] : Colors.orange[800],
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
                         ),
+                      ),
+                    ] else ...[
+                      const Text(
+                        'Maintenance Billing Period: Aug 2026',
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
                       ),
                     ],
                     if (dues > 0) ...[

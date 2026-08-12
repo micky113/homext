@@ -180,6 +180,20 @@ class ResidentProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> confirmPayment(String userId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await ResidentRepositoryImpl().confirmPayment(userId: userId);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      developer.log("Error confirming payment: $e");
+      notifyListeners();
+    }
+  }
+
   Future<void> rejectPayment(String userId) async {
     _isLoading = true;
     notifyListeners();
@@ -194,11 +208,11 @@ class ResidentProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> submitPaymentVerification({required String userId, required String remarks}) async {
+  Future<void> submitPaymentVerification({required String userId, required String remarks, required String amountPaid}) async {
     _isLoading = true;
     notifyListeners();
     try {
-      await ResidentRepositoryImpl().submitPaymentVerification(userId: userId, remarks: remarks);
+      await ResidentRepositoryImpl().submitPaymentVerification(userId: userId, remarks: remarks, amountPaid: amountPaid);
       _isLoading = false;
       notifyListeners();
     } catch (e) {

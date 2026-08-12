@@ -590,23 +590,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final notices = provider.notices;
     
-    final maintenancePaid = user.metadata['maintenancePaid'] == 'true';
-    final monthlyMaintenance = double.tryParse(provider.monthlyMaintenance) ?? 2500.0;
+    final dues = double.tryParse(user.metadata['pendingDues']?.toString() ?? '0') ?? 0.0;
     
-    final chargesList = user.metadata['charges'] as List? ?? [];
-    double customSum = 0.0;
-    for (final c in chargesList) {
-      customSum += double.tryParse(c['amount']?.toString() ?? '0') ?? 0.0;
-    }
-    
-    final dues = (maintenancePaid ? 0.0 : monthlyMaintenance) + customSum;
-    
-    final latestNoticeTitle = notices.isNotEmpty 
-        ? notices.first.title 
-        : 'No notices posted yet';
-    final latestNoticeDate = notices.isNotEmpty 
-        ? '${notices.first.timestamp.day}/${notices.first.timestamp.month}/${notices.first.timestamp.year}' 
-        : '';
+    // We will render up to 10 announcements dynamically from the notices list
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -712,48 +698,75 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Latest Announcement',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              if (latestNoticeDate.isNotEmpty)
-                                Text(
-                                  latestNoticeDate,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            latestNoticeTitle,
-                            style: const TextStyle(
-                              fontSize: 15,
+                          const Text(
+                            'Recent Announcements',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
                               fontWeight: FontWeight.bold,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          if (notices.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              notices.first.content,
+                          const SizedBox(height: 12),
+                          if (notices.isEmpty)
+                            const Text(
+                              'No announcements posted yet',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                            )
+                          else
+                            ...notices.take(10).map((notice) {
+                              final noticeIndex = notices.indexOf(notice);
+                              final limitCount = notices.take(10).length;
+                              final isLast = noticeIndex == limitCount - 1;
+                              final dateStr = '${notice.timestamp.day}/${notice.timestamp.month}/${notice.timestamp.year}';
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          notice.title,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        dateStr,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    notice.content,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (!isLast) ...[
+                                    const SizedBox(height: 8),
+                                    Divider(color: (isDark ? AppColors.glassBorder : Colors.grey[200])?.withAlpha(80)),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ],
+                              );
+                            }),
                         ],
                       ),
                     ),
