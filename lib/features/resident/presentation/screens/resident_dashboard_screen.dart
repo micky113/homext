@@ -19,6 +19,346 @@ class ResidentDashboardScreen extends StatefulWidget {
 class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   bool _initialized = false;
 
+  static final Map<String, _BrandInfo> _brandMapping = {
+    'swiggy': _BrandInfo(
+      domain: 'swiggy.com',
+      primaryColor: const Color(0xFFFC8019),
+      fallbackTextColor: Colors.white,
+    ),
+    'zomato': _BrandInfo(
+      domain: 'zomato.com',
+      primaryColor: const Color(0xFFCB202D),
+      fallbackTextColor: Colors.white,
+    ),
+    'amazon': _BrandInfo(
+      domain: 'amazon.in',
+      primaryColor: const Color(0xFF232F3E),
+      fallbackTextColor: const Color(0xFFFF9900),
+    ),
+    'uber': _BrandInfo(
+      domain: 'uber.com',
+      primaryColor: Colors.black,
+      fallbackTextColor: Colors.white,
+    ),
+    'flipkart': _BrandInfo(
+      domain: 'flipkart.com',
+      primaryColor: const Color(0xFF2874F0),
+      fallbackTextColor: const Color(0xFFFFE11B),
+    ),
+    'dunzo': _BrandInfo(
+      domain: 'dunzo.com',
+      primaryColor: const Color(0xFF00E676),
+      fallbackTextColor: Colors.black,
+    ),
+    'urban company': _BrandInfo(
+      domain: 'urbancompany.com',
+      primaryColor: Colors.black,
+      fallbackTextColor: Colors.white,
+    ),
+    'dhl': _BrandInfo(
+      domain: 'dhl.com',
+      primaryColor: const Color(0xFFFFCC00),
+      fallbackTextColor: const Color(0xFFD40511),
+    ),
+    'bluedart': _BrandInfo(
+      domain: 'bluedart.com',
+      primaryColor: const Color(0xFF003399),
+      fallbackTextColor: const Color(0xFFFFCC00),
+    ),
+    'fedex': _BrandInfo(
+      domain: 'fedex.com',
+      primaryColor: const Color(0xFFFF6200),
+      fallbackTextColor: Colors.white,
+    ),
+    'blinkit': _BrandInfo(
+      domain: 'blinkit.com',
+      primaryColor: const Color(0xFFF7EC13),
+      fallbackTextColor: Colors.black,
+    ),
+    'blink it': _BrandInfo(
+      domain: 'blinkit.com',
+      primaryColor: const Color(0xFFF7EC13),
+      fallbackTextColor: Colors.black,
+    ),
+    'ola': _BrandInfo(
+      domain: 'olacabs.com',
+      primaryColor: const Color(0xFFC6DB1A),
+      fallbackTextColor: Colors.black,
+    ),
+    'ola cabs': _BrandInfo(
+      domain: 'olacabs.com',
+      primaryColor: const Color(0xFFC6DB1A),
+      fallbackTextColor: Colors.black,
+    ),
+    'rapido': _BrandInfo(
+      domain: 'rapido.bike',
+      primaryColor: const Color(0xFFFFDD00),
+      fallbackTextColor: Colors.black,
+    ),
+  };
+
+  String? _detectBrandKey(String name, String purpose) {
+    final lowerName = name.toLowerCase();
+    final lowerPurpose = purpose.toLowerCase();
+    for (final key in _brandMapping.keys) {
+      if (lowerName.contains(key) || lowerPurpose.contains(key)) {
+        return key;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildBrandLogo(String brandKey) {
+    switch (brandKey.toLowerCase()) {
+      case 'rapido':
+        return Container(
+          color: const Color(0xFFFFDD00),
+          child: const Center(
+            child: Text(
+              'rapido',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                fontFamily: 'Outfit',
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+        );
+      case 'ola':
+      case 'ola cabs':
+        return Container(
+          color: const Color(0xFFC6DB1A),
+          child: const Center(
+            child: Text(
+              'ola',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                fontFamily: 'Outfit',
+                letterSpacing: -1,
+              ),
+            ),
+          ),
+        );
+      case 'blinkit':
+      case 'blink it':
+        return Container(
+          color: const Color(0xFFF7EC13),
+          child: const Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'blink',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                    fontFamily: 'Outfit',
+                  ),
+                ),
+                Text(
+                  'it',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w400,
+                    fontSize: 11,
+                    fontFamily: 'Outfit',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      case 'swiggy':
+        return Container(
+          color: const Color(0xFFFC8019),
+          child: const Center(
+            child: Text(
+              'S',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 22,
+                fontStyle: FontStyle.italic,
+                fontFamily: 'Outfit',
+              ),
+            ),
+          ),
+        );
+      case 'zomato':
+        return Container(
+          color: const Color(0xFFCB202D),
+          child: const Center(
+            child: Icon(
+              Icons.favorite_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        );
+      case 'amazon':
+        return Container(
+          color: const Color(0xFF232F3E),
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'a',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    height: 1.0,
+                    fontFamily: 'Outfit',
+                  ),
+                ),
+                Icon(
+                  Icons.subdirectory_arrow_right_rounded,
+                  color: Color(0xFFFF9900),
+                  size: 10,
+                ),
+              ],
+            ),
+          ),
+        );
+      case 'uber':
+        return Container(
+          color: Colors.black,
+          child: const Center(
+            child: Text(
+              'U',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                fontFamily: 'Outfit',
+                letterSpacing: -1,
+              ),
+            ),
+          ),
+        );
+      case 'flipkart':
+        return Container(
+          color: const Color(0xFF2874F0),
+          child: const Center(
+            child: Icon(
+              Icons.shopping_cart_rounded,
+              color: Color(0xFFFFE11B),
+              size: 22,
+            ),
+          ),
+        );
+      case 'dunzo':
+        return Container(
+          color: const Color(0xFF0F0F14),
+          child: const Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'd',
+                  style: TextStyle(
+                    color: Color(0xFF00E676),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    fontFamily: 'Outfit',
+                  ),
+                ),
+                Icon(
+                  Icons.flash_on_rounded,
+                  color: Color(0xFF00E676),
+                  size: 12,
+                ),
+              ],
+            ),
+          ),
+        );
+      case 'urban company':
+        return Container(
+          color: Colors.black,
+          child: const Center(
+            child: Text(
+              'UC',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: 0.5,
+                fontFamily: 'Outfit',
+              ),
+            ),
+          ),
+        );
+      case 'dhl':
+        return Container(
+          color: const Color(0xFFFFCC00),
+          child: const Center(
+            child: Text(
+              'DHL',
+              style: TextStyle(
+                color: Color(0xFFD40511),
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+        );
+      case 'bluedart':
+        return Container(
+          color: const Color(0xFF003399),
+          child: const Center(
+            child: Text(
+              'BD',
+              style: TextStyle(
+                color: Color(0xFFFFCC00),
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        );
+      case 'fedex':
+        return Container(
+          color: Colors.white,
+          child: const Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Fed',
+                  style: TextStyle(
+                    color: Color(0xFF4D148C),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  'Ex',
+                  style: TextStyle(
+                    color: Color(0xFFFF6200),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -270,30 +610,123 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // Quick Actions
+                    Text(
+                      'Quick Actions',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Outfit',
+                          ),
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(
-                          child: _buildActionButton(
-                            context,
-                            title: 'Invite Guest',
-                            subtitle: 'Pre-approve entry',
-                            icon: Icons.person_add_rounded,
-                            gradient: AppColors.primaryGradient,
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => InviteVisitorDialog(
-                                  userId: user.uid,
-                                  flatNumber: user.flatNumber,
-                                  hostName: user.name,
+                        InkWell(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => InviteVisitorDialog(
+                                userId: user.uid,
+                                flatNumber: user.flatNumber,
+                                hostName: user.name,
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Ink(
+                            width: 110,
+                            height: 110,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withAlpha(30),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.person_add_rounded, size: 28, color: Colors.white),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Invite Guest',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              );
-                            },
+                                SizedBox(height: 2),
+                                Text(
+                                  'Pre-approve',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        InkWell(
+                          onTap: () {
+                            GoRouter.of(context).push('/society-dues');
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Ink(
+                            width: 110,
+                            height: 110,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppColors.secondary, Color(0xFFAD9F8F)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.secondary.withAlpha(30),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.account_balance_wallet_rounded, size: 28, color: Colors.white),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Society Dues',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Pay & Submit',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
                     // Active Invites Section
                     Row(
@@ -398,70 +831,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Gradient gradient,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.colors.first.withAlpha(40),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(40),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 28, color: Colors.white),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Outfit',
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(200),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 18, color: Colors.white),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildEmptyState(BuildContext context, {required IconData icon, required String message}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -496,6 +866,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   }
 
   Widget _buildHistoryList(BuildContext context, ResidentProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -519,64 +890,212 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                 icon: Icons.history_rounded,
                 message: 'No visitor entries recorded yet.',
               )
-            : ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: provider.history.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final log = provider.history[index];
-                  final statusColor = log.status == 'APPROVED'
-                      ? AppColors.secondary
-                      : log.status == 'EXITED'
-                          ? Colors.grey
-                          : log.status == 'DENIED'
-                              ? AppColors.error
-                              : AppColors.warning;
-                          
-                  final statusIcon = log.status == 'APPROVED'
-                      ? Icons.check_circle_outline_rounded
-                      : log.status == 'EXITED'
-                          ? Icons.exit_to_app_rounded
-                          : log.status == 'DENIED'
-                              ? Icons.cancel_outlined
-                              : Icons.hourglass_empty_rounded;
+            : SizedBox(
+                height: 105,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: provider.history.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    final log = provider.history[index];
+                    debugPrint('Rendering history item name: "${log.visitorName}" | status: "${log.status}"');
+                    debugPrint('Brand match for "${log.visitorName}": ${_detectBrandKey(log.visitorName, log.purpose)}');
+                    final statusColor = log.status == 'APPROVED'
+                        ? AppColors.secondary
+                        : log.status == 'EXITED'
+                            ? Colors.grey
+                            : log.status == 'DENIED'
+                                ? AppColors.error
+                                : AppColors.warning;
+                            
+                    final statusIcon = log.status == 'APPROVED'
+                        ? Icons.check_circle_outline_rounded
+                        : log.status == 'EXITED'
+                            ? Icons.exit_to_app_rounded
+                            : log.status == 'DENIED'
+                                ? Icons.cancel_outlined
+                                : Icons.hourglass_empty_rounded;
 
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: statusColor.withAlpha(15),
-                        child: Icon(statusIcon, color: statusColor),
-                      ),
-                      title: Text(
-                        log.visitorName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        'Purpose: ${log.purpose} • Gate: ${log.gateNumber}\nTime: ${_formatTime(log.timestamp)}',
-                      ),
-                      isThreeLine: true,
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: statusColor.withAlpha(25),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: statusColor.withAlpha(80)),
-                        ),
-                        child: Text(
-                          log.status,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                    // Get initials
+                    final initials = log.visitorName.trim().isNotEmpty
+                        ? log.visitorName.trim().split(' ').map((e) => e[0]).take(2).join().toUpperCase()
+                        : '?';
+
+                    final hour = log.timestamp.hour.toString().padLeft(2, '0');
+                    final min = log.timestamp.minute.toString().padLeft(2, '0');
+                    final timeStr = '$hour:$min';
+
+                    return InkWell(
+                      onTap: () {
+                        // Show a beautiful detail dialog when tapped
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            title: Row(
+                              children: [
+                                Icon(statusIcon, color: statusColor),
+                                const SizedBox(width: 8),
+                                const Text('Visitor Details', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildDetailRow(context, 'Name', log.visitorName),
+                                _buildDetailRow(context, 'Purpose', log.purpose),
+                                _buildDetailRow(context, 'Gate', log.gateNumber),
+                                _buildDetailRow(context, 'Time', _formatTime(log.timestamp)),
+                                _buildDetailRow(context, 'Status', log.status, color: statusColor),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Close'),
+                              ),
+                            ],
                           ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Stack(
+                              children: [
+                                (() {
+                                  final brandKey = _detectBrandKey(log.visitorName, log.purpose);
+                                  if (brandKey != null) {
+                                    final brand = _brandMapping[brandKey]!;
+                                    return Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: statusColor, width: 2),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(28),
+                                        child: Image.network(
+                                          'https://logos.hunter.io/${brand.domain}',
+                                          width: 56,
+                                          height: 56,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return _buildBrandLogo(brandKey);
+                                          },
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Container(
+                                              color: brand.primaryColor.withAlpha(50),
+                                              child: const Center(
+                                                child: SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: statusColor.withAlpha(20),
+                                      border: Border.all(color: statusColor, width: 2),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        initials,
+                                        style: TextStyle(
+                                          color: statusColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                })(),
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? AppColors.darkSurface : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      statusIcon,
+                                      size: 14,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              width: 68,
+                              child: Text(
+                                log.visitorName,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              timeStr,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
       ],
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value, {Color? color}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color ?? (isDark ? Colors.white : Colors.black87),
+                fontWeight: color != null ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -799,4 +1318,16 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       ],
     );
   }
+}
+
+class _BrandInfo {
+  final String domain;
+  final Color primaryColor;
+  final Color fallbackTextColor;
+  
+  _BrandInfo({
+    required this.domain,
+    required this.primaryColor,
+    required this.fallbackTextColor,
+  });
 }

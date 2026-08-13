@@ -20,6 +20,370 @@ class InviteVisitorDialog extends StatefulWidget {
 }
 
 class _InviteVisitorDialogState extends State<InviteVisitorDialog> {
+  static final Map<String, _DialogBrandInfo> _dialogBrandMapping = {
+    'swiggy': _DialogBrandInfo(
+      domain: 'swiggy.com',
+      primaryColor: const Color(0xFFFC8019),
+      fallbackTextColor: Colors.white,
+    ),
+    'zomato': _DialogBrandInfo(
+      domain: 'zomato.com',
+      primaryColor: const Color(0xFFCB202D),
+      fallbackTextColor: Colors.white,
+    ),
+    'amazon': _DialogBrandInfo(
+      domain: 'amazon.in',
+      primaryColor: const Color(0xFF232F3E),
+      fallbackTextColor: const Color(0xFFFF9900),
+    ),
+    'uber': _DialogBrandInfo(
+      domain: 'uber.com',
+      primaryColor: Colors.black,
+      fallbackTextColor: Colors.white,
+    ),
+    'flipkart': _DialogBrandInfo(
+      domain: 'flipkart.com',
+      primaryColor: const Color(0xFF2874F0),
+      fallbackTextColor: const Color(0xFFFFE11B),
+    ),
+    'dunzo': _DialogBrandInfo(
+      domain: 'dunzo.com',
+      primaryColor: const Color(0xFF00E676),
+      fallbackTextColor: Colors.black,
+    ),
+    'urban company': _DialogBrandInfo(
+      domain: 'urbancompany.com',
+      primaryColor: Colors.black,
+      fallbackTextColor: Colors.white,
+    ),
+    'dhl': _DialogBrandInfo(
+      domain: 'dhl.com',
+      primaryColor: const Color(0xFFFFCC00),
+      fallbackTextColor: const Color(0xFFD40511),
+    ),
+    'bluedart': _DialogBrandInfo(
+      domain: 'bluedart.com',
+      primaryColor: const Color(0xFF003399),
+      fallbackTextColor: const Color(0xFFFFCC00),
+    ),
+    'fedex': _DialogBrandInfo(
+      domain: 'fedex.com',
+      primaryColor: const Color(0xFFFF6200),
+      fallbackTextColor: Colors.white,
+    ),
+    'blinkit': _DialogBrandInfo(
+      domain: 'blinkit.com',
+      primaryColor: const Color(0xFFF7EC13),
+      fallbackTextColor: Colors.black,
+    ),
+    'blink it': _DialogBrandInfo(
+      domain: 'blinkit.com',
+      primaryColor: const Color(0xFFF7EC13),
+      fallbackTextColor: Colors.black,
+    ),
+    'ola': _DialogBrandInfo(
+      domain: 'olacabs.com',
+      primaryColor: const Color(0xFFC6DB1A),
+      fallbackTextColor: Colors.black,
+    ),
+    'ola cabs': _DialogBrandInfo(
+      domain: 'olacabs.com',
+      primaryColor: const Color(0xFFC6DB1A),
+      fallbackTextColor: Colors.black,
+    ),
+    'rapido': _DialogBrandInfo(
+      domain: 'rapido.bike',
+      primaryColor: const Color(0xFFFFDD00),
+      fallbackTextColor: Colors.black,
+    ),
+  };
+
+  String? _detectDialogBrandKey(String name) {
+    final lowerName = name.toLowerCase();
+    for (final key in _dialogBrandMapping.keys) {
+      if (lowerName.contains(key)) {
+        return key;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildBrandLogoWidget(String brandName, IconData defaultIcon, Color defaultColor) {
+    final brandKey = _detectDialogBrandKey(brandName);
+    if (brandKey == null) {
+      return CircleAvatar(
+        backgroundColor: defaultColor.withAlpha(20),
+        radius: 18,
+        child: Icon(defaultIcon, color: defaultColor, size: 18),
+      );
+    }
+
+    final brand = _dialogBrandMapping[brandKey]!;
+    
+    Widget vectorFallback;
+    switch (brandKey.toLowerCase()) {
+      case 'swiggy':
+        vectorFallback = const Center(
+          child: Text(
+            'S',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+              fontFamily: 'Outfit',
+            ),
+          ),
+        );
+        break;
+      case 'zomato':
+        vectorFallback = const Center(
+          child: Icon(
+            Icons.favorite_rounded,
+            color: Colors.white,
+            size: 16,
+          ),
+        );
+        break;
+      case 'amazon':
+        vectorFallback = const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'a',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  height: 1.0,
+                  fontFamily: 'Outfit',
+                ),
+              ),
+              Icon(
+                Icons.subdirectory_arrow_right_rounded,
+                color: Color(0xFFFF9900),
+                size: 8,
+              ),
+            ],
+          ),
+        );
+        break;
+      case 'uber':
+        vectorFallback = const Center(
+          child: Text(
+            'U',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              fontFamily: 'Outfit',
+              letterSpacing: -0.5,
+            ),
+          ),
+        );
+        break;
+      case 'flipkart':
+        vectorFallback = const Center(
+          child: Icon(
+            Icons.shopping_cart_rounded,
+            color: Color(0xFFFFE11B),
+            size: 14,
+          ),
+        );
+        break;
+      case 'dunzo':
+        vectorFallback = const Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'd',
+                style: TextStyle(
+                  color: Color(0xFF00E676),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  fontFamily: 'Outfit',
+                ),
+              ),
+              Icon(
+                Icons.flash_on_rounded,
+                color: Color(0xFF00E676),
+                size: 8,
+              ),
+            ],
+          ),
+        );
+        break;
+      case 'urban company':
+        vectorFallback = const Center(
+          child: Text(
+            'UC',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              fontFamily: 'Outfit',
+            ),
+          ),
+        );
+        break;
+      case 'dhl':
+        vectorFallback = const Center(
+          child: Text(
+            'DHL',
+            style: TextStyle(
+              color: Color(0xFFD40511),
+              fontWeight: FontWeight.w900,
+              fontSize: 10,
+              fontStyle: FontStyle.italic,
+              letterSpacing: -0.5,
+            ),
+          ),
+        );
+        break;
+      case 'bluedart':
+        vectorFallback = const Center(
+          child: Text(
+            'BD',
+            style: TextStyle(
+              color: Color(0xFFFFCC00),
+              fontWeight: FontWeight.w900,
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        );
+        break;
+      case 'fedex':
+        vectorFallback = const Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Fed',
+                style: TextStyle(
+                  color: Color(0xFF4D148C),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 8,
+                ),
+              ),
+              Text(
+                'Ex',
+                style: TextStyle(
+                  color: Color(0xFFFF6200),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 8,
+                ),
+              ),
+            ],
+          ),
+        );
+        break;
+      case 'blinkit':
+      case 'blink it':
+        vectorFallback = const Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'blink',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 7,
+                  fontFamily: 'Outfit',
+                ),
+              ),
+              Text(
+                'it',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w400,
+                  fontSize: 7,
+                  fontFamily: 'Outfit',
+                ),
+              ),
+            ],
+          ),
+        );
+        break;
+      case 'ola':
+      case 'ola cabs':
+        vectorFallback = const Center(
+          child: Text(
+            'ola',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              fontFamily: 'Outfit',
+              letterSpacing: -0.5,
+            ),
+          ),
+        );
+        break;
+      case 'rapido':
+        vectorFallback = const Center(
+          child: Text(
+            'rapido',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w900,
+              fontSize: 9,
+              fontFamily: 'Outfit',
+              letterSpacing: -0.5,
+            ),
+          ),
+        );
+        break;
+      default:
+        vectorFallback = CircleAvatar(
+          backgroundColor: defaultColor.withAlpha(20),
+          radius: 18,
+          child: Icon(defaultIcon, color: defaultColor, size: 18),
+        );
+    }
+
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Image.network(
+          'https://logos.hunter.io/${brand.domain}',
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: brand.primaryColor,
+              child: vectorFallback,
+            );
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: brand.primaryColor.withAlpha(50),
+              child: const Center(
+                child: SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   String _purpose = 'Guest';
@@ -139,11 +503,7 @@ class _InviteVisitorDialogState extends State<InviteVisitorDialog> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    CircleAvatar(
-                                      backgroundColor: brandColor.withAlpha(20),
-                                      radius: 18,
-                                      child: Icon(brandIcon, color: brandColor, size: 18),
-                                    ),
+                                    _buildBrandLogoWidget(brandName, brandIcon, brandColor),
                                     const SizedBox(height: 6),
                                     Text(
                                       brandName,
@@ -305,11 +665,7 @@ class _InviteVisitorDialogState extends State<InviteVisitorDialog> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    CircleAvatar(
-                                      backgroundColor: brandColor.withAlpha(20),
-                                      radius: 18,
-                                      child: Icon(brandIcon, color: brandColor, size: 18),
-                                    ),
+                                    _buildBrandLogoWidget(brandName, brandIcon, brandColor),
                                     const SizedBox(height: 6),
                                     Text(
                                       brandName,
@@ -527,11 +883,7 @@ class _InviteVisitorDialogState extends State<InviteVisitorDialog> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    CircleAvatar(
-                                      backgroundColor: brandColor.withAlpha(20),
-                                      radius: 18,
-                                      child: Icon(brandIcon, color: brandColor, size: 18),
-                                    ),
+                                    _buildBrandLogoWidget(brandName, brandIcon, brandColor),
                                     const SizedBox(height: 6),
                                     Text(
                                       brandName,
@@ -954,4 +1306,16 @@ class _InviteVisitorDialogState extends State<InviteVisitorDialog> {
       ),
     );
   }
+}
+
+class _DialogBrandInfo {
+  final String domain;
+  final Color primaryColor;
+  final Color fallbackTextColor;
+  
+  _DialogBrandInfo({
+    required this.domain,
+    required this.primaryColor,
+    required this.fallbackTextColor,
+  });
 }
